@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+body { font: 12px Arial;}
+
+path {
+    stroke: steelblue;
+    stroke-width: 2;
+    fill: none;
+}
+
+.axis path,
+.axis line {
+    fill: none;
+    stroke: grey;
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+}
+</style>
+<body>
+<div id="option">
+     <input name="updateButton" type="button" value="Stratified Sampling PCA" onclick="drawdata2()" />
+     <input name="updateButton" type="button" value="Raw Data PCA" onclick="Raw_Data_PCA()" />
+     <input name="updateButton" type="button" value="Random Sampling PCA" onclick="Random_Sampling_PCA()" />
+</div>
+<a href="/2dplot"><button>2-PC Plot</button></a>
+<a href="/mds"><button>MDS Plots</button></a>
+<a href="/attri_matrix"><button>3-attribute Matrix</button></a>
+
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+<script>
+    var data = {{ data.chart_data | safe }}
+    console.log(data);
+    // Set the dimensions of the canvas / graph
+    var margin = {top: 30, right: 20, bottom: 30, left: 50},
+        width = 600 - margin.left - margin.right,
+        height = 400 - margin.top - margin.bottom;
+
+    // Set the ranges
+    //var x = d3.time.scale().range([0, width]);
+    var x = d3.scale.linear().range([0, width]);
+    var y = d3.scale.linear().range([height, 0]);
+
+    // Define the axes
+    var xAxis = d3.svg.axis().scale(x)
+        .orient("bottom").ticks(20);
+
+    var yAxis = d3.svg.axis().scale(y)
+        .orient("left").ticks(20);
+
+    // Define the line
+    var valueline = d3.svg.line()
+        .x(function(d,i) { return x(i+1); })
+        .y(function(d) { return y(d.variance); });
+
+    var valueline2 = d3.svg.line()
+      .x(function(d){ return x(d.date);})
+      .y(function(d){ return y(d.open);});
+
+    // Adds the svg canvas
+    var svg = d3.select("body")
+        .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+            .attr("transform",
+                  "translate(" + margin.left + "," + margin.top + ")");
+
+function drawdata(){
+  data.forEach(function(d) {
+      d.variance = d.variance;
+  });
+
+// Scale the range of the data
+    x.domain(d3.extent(data, function(d,i) { return i+1; }));
+    y.domain([0, d3.max(data, function(d) { return d.variance; })]);
+
+    // Add the valueline path.
+    svg.append("path")
+        .attr("class", "line")
+        .attr("d", valueline(data));
+    // Add the X Axis
+    svg.append("g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + height + ")")
+        .call(xAxis)
+        .append("text")
+        .attr("text-anchor", "end")
+        .attr("dy", "2.5em")
+        .attr("dx", "25em")
+        .text("PC Number");
+    // Add the Y Axis
+    svg.append("g")
+        .attr("class", "y axis")
+        .call(yAxis)
+        .append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("dy", "-2.5em")
+        .attr("dx", "-5.5em")
+        .text("Eigenvalue");
+
+    svg.selectAll(".dot")
+        .data(data)
+        .enter().append("circle")
+        .attr("class", "dot")
+        .attr("cx", function(d, i) { return x(i+1) })
+        .attr("cy", function(d) { return y(d.variance) })
+        .attr("r", 4)
+        .style("fill", "green");
+}
+drawdata(data)
+
+
+function Raw_Data_PCA() {
+    $.post("", {'data': 'raw_df'}, function(data_infunc){
+    data2 = JSON.parse(data_infunc.chart_data)
+    console.log(data2);
+    data2.forEach(function(d) {
+    d.variance = d.variance;
+    });
+
+  	x.domain(d3.extent(data2, function(d,i) { return i+1;}));
+    y.domain([0, d3.max(data2, function(d) { return d.variance;})]);
+
+    // Select the section we want to apply our changes to
+    var svg = d3.select("body").transition();
+
+    svg.select(".line")   // change the line
+        .duration(750)
+        .attr("d", valueline(data2));
+    svg.select(".x.axis") // change the x axis
+        .duration(750)
+        .call(xAxis);
+    svg.select(".y.axis") // change the y axis
+        .duration(750)
+        .call(yAxis);
+    svg.selectAll(".dot")
+       .duration(750)
+       .attr("cx", function(d, i) { return x(i+1) })
+       .attr("cy", function(d) { return y(d.variance) })
+       .style("fill", "orange");
+    })
+}
+
+function Random_Sampling_PCA() {
+    $.post("", {'data': 'ran_df'}, function(data_infunc){
+    data1 = JSON.parse(data_infunc.chart_data)
+    console.log(data1);
+    data1.forEach(function(d) {
+    d.variance = d.variance;
+    });
+
+    x.domain(d3.extent(data1, function(d,i) { return i+1; }));
+    y.domain([0, d3.max(data1, function(d) { return d.variance; })]);
+
+    var svg = d3.select("body").transition();
+
+    svg.select(".line")   // change the line
+        .duration(750)
+        .attr("d", valueline(data1));
+    svg.select(".x.axis") // change the x axis
+        .duration(750)
+        .call(xAxis);
+    svg.select(".y.axis") // change the y axis
+        .duration(750)
+        .call(yAxis);
+    svg.selectAll(".dot")
+       .duration(750)
+       .attr("cx", function(d, i) { return x(i+1) })
+       .attr("cy", function(d) { return y(d.variance) })
+       .style("fill", "red");
+    })
+}
+
+
+function drawdata2() {
+    $.post("", {'data': 'y_str'}, function(data_infunc){
+    data = JSON.parse(data_infunc.chart_data)
+    console.log(data);
+    data.forEach(function(d) {
+    d.variance = d.variance;
+    });
+
+  	x.domain(d3.extent(data, function(d,i) { return i+1; }));
+    y.domain([0, d3.max(data, function(d) { return d.variance; })]);
+
+    var svg = d3.select("body").transition();
+
+    svg.select(".line")   // change the line
+        .duration(750)
+        .attr("d", valueline(data));
+    svg.select(".x.axis") // change the x axis
+        .duration(750)
+        .call(xAxis);
+    svg.select(".y.axis") // change the y axis
+        .duration(750)
+        .call(yAxis);
+    svg.selectAll(".dot")
+       .duration(750)
+       .attr("cx", function(d, i) { return x(i+1) })
+       .attr("cy", function(d) { return y(d.variance) })
+       .style("fill", "green");
+    })
+}
+</script>
+</body>
+</html>

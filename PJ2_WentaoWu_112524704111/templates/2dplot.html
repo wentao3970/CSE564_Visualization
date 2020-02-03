@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<style>
+.axis path,
+.axis line {
+  fill: none;
+	stroke: black;
+	shape-rendering: crispEdges;
+}
+.axis text {
+	font-family: sans-serif;
+	font-size: 11px;
+}
+</style>
+
+<body>
+
+<div id="option">
+     <a href="/"><button>PCA Plots</button></a>
+</div>
+
+<a href="/mds"><button>MDS Plot</button></a>
+<a href="/attri_matrix"><button>3-attribute Matrix</button></a>
+
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+<script>
+    var data = {{ data.chart_data | safe }}
+    console.log(data);
+
+    var body = d3.select('body')
+    var margin = { top: 50, right: 50, bottom: 50, left: 50 }
+    var h = 500 - margin.top - margin.bottom
+    var w = 600 - margin.left - margin.right
+    var colorScale = d3.scale.category10()
+
+
+    var xScale = d3.scale.linear()
+    .domain([
+      d3.min([0,d3.min(data,function (d) { return d.PC1-1 })]),
+      d3.max([0,d3.max(data,function (d) { return d.PC1+1 })])
+      ])
+    .range([0,w])
+    var yScale = d3.scale.linear()
+    .domain([
+      d3.min([0,d3.min(data,function (d) { return d.PC2-1 })]),
+      d3.max([0,d3.max(data,function (d) { return d.PC2+1 })])
+      ])
+    .range([h,0])
+
+
+    var svg = body.append('svg')
+      .attr('height',h + margin.top + margin.bottom)
+      .attr('width',w + margin.left + margin.right)
+    .append('g')
+      .attr('transform','translate(' + margin.left + ',' + margin.top + ')')
+
+    var xAxis = d3.svg.axis()
+    .scale(xScale)
+    .ticks(10)
+    .orient('bottom')
+    var yAxis = d3.svg.axis()
+    .scale(yScale)
+    .ticks(10)
+    .orient('left')
+
+function TwoPC2D() {
+    data.forEach(function(d) {
+        d.PC1 = d.PC1
+        d.PC2 = d.PC2
+    });
+
+    var color = d3.scale.category10();
+
+    var circles = svg.selectAll('circle')
+        .data(data)
+        .enter()
+      .append('circle')
+        .attr('cx',function (d) { return xScale(d.PC1) })
+        .attr('cy',function (d) { return yScale(d.PC2) })
+        .attr('r','3')
+        .attr('stroke','black')
+        .attr('stroke-width',1)
+        .style("fill", function(d) { return color(d.price); });
+
+    var legend = svg.selectAll(".legend")
+          .data(color.domain())
+        .enter().append("g")
+          .attr("class", "legend")
+          .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+    legend.append("rect")
+        .attr("x", w - 18)
+        .attr("width", 18)
+        .attr("height", 18)
+        .style("fill", color);
+
+    legend.append("text")
+        .attr("x", w - 24)
+        .attr("y", 9)
+        .attr("dy", ".35em")
+        .style("text-anchor", "end")
+        .text(function(d) { return d; });
+
+    // X-axis
+    svg.append('g')
+        .attr('class','axis')
+        .attr('transform', 'translate(0,' + h + ')')
+        .call(xAxis)
+      .append('text') // X-axis Label
+        .attr('class','label')
+        .attr('y',-10)
+        .attr('x',w)
+        .attr('dy','.71em')
+        .style('text-anchor','end')
+        .text('Components 1')
+    // Y-axis
+    svg.append('g')
+        .attr('class', 'axis')
+        .call(yAxis)
+      .append('text')
+        .attr('class','label')
+        .attr('transform','rotate(-90)')
+        .attr('x',0)
+        .attr('y',5)
+        .attr('dy','.71em')
+        .style('text-anchor','end')
+        .text('Component 2')
+}
+TwoPC2D(data)
+
+</script>
+</body>
+</html>
