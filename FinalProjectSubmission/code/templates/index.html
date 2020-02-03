@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/html">
+<head>
+  <title> Housing Prices </title>
+  <script src="https://d3js.org/d3.v4.min.js"></script>
+  <script src="https://d3js.org/topojson.v2.min.js"></script>
+  <style>
+  .states :hover {
+    fill: darkred;
+  }
+  .states {
+    fill: steelblue;
+    opacity: 0.7;
+  }
+  .state-borders {
+    fill: none;
+    stroke: #fff;
+    stroke-width: 0.5px;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    pointer-events: none;
+  }
+  .tooltip{
+    position: absolute;
+    width: 350px;
+    height: auto;
+    font-size: 15px;
+    text-align: center;
+    border-style: solid;
+    border-width: 1px;
+    background-color: white;
+    border-radius: 5px;
+    font-family: Arial, Helvetica, sans-serif;
+    padding:2px;
+  }
+  </style>
+
+
+</head>
+<body>
+<div id='header' style = 'background-color: #30608F; height: 60px;'>
+  <h1 style="text-align:center;color:white;font-size: 45px">Exploration and Prediction of Housing Prices in the United States</h1>
+  <script>
+    //head
+  </script>
+
+</div>
+
+<div id="map" style="float: left;">
+  <svg width="1660" height="680"></svg>
+  <!-- <svg_1 width="1560" height="600"></svg_1> -->
+  <script>
+  var svg = d3.select("svg");
+
+  var dominate = {{domindata | safe }}
+  var pcaData = {{pca_data | safe}}
+  var martirdata = {{martirdata | safe}}
+
+  //console.log(martirdata['Alabama']);
+  // console.log(pcaData['Alabama']);
+
+  var tooltip = d3.select("body")
+          .append("div")
+          .attr("class","tooltip")
+          .style("opacity",0.0);
+
+  var path = d3.geoPath();
+  d3.json("https://cdn.jsdelivr.net/npm/us-atlas@2/us/10m.json", function(error, us) {
+      // console.log(us.objects.states.geometries[0].properties.name);
+    if (error) throw error;
+
+    svg.append("g")
+        .attr("class", "states")
+        .selectAll("path")
+        .data(topojson.feature(us, us.objects.states).features)
+        .enter().append("path")
+        .attr("d", path)
+       //     .attr('fill',)
+        .on('click',onMouseClick)
+        .on("mouseover",function(d){
+          tooltip.html(`${d3.select(this)._groups[0][0].__data__.properties.name}<br/>Dominance 1:<br/>${finddominate1(d3.select(this)._groups[0][0].__data__.properties.name)}<br/>Dominance 2:<br/>${finddominate2(d3.select(this)._groups[0][0].__data__.properties.name)}`)
+                  .style("left", (d3.event.pageX) + "px")
+                  .style("top", (d3.event.pageY + 10) + "px")
+                  .style("opacity",1.0);
+        })
+        .on("mouseout",function(d){
+          tooltip.style("opacity",0.0);
+        });
+
+    svg.append("path")
+        .attr("class", "state-borders")
+        .attr("d", path(topojson.mesh(us, us.objects.states, function(a, b) { return a !== b; })));
+
+    svg.append("line")
+        .attr("x1",970)
+        .attr("y1",0)
+        .attr("x2",970)
+        .attr("y2",680)
+        .attr("stroke","steelblue")
+        .attr('opacity','0.7')
+        .attr("stroke-width",2);
+
+    svg.append("line")
+        .attr("x1",970)
+        .attr("y1",330)
+        .attr("x2",1660)
+        .attr("y2",330)
+        .attr("stroke","steelblue")
+        .attr('opacity','0.7')
+        .attr("stroke-width",2);
+  });
+
+function finddominate1(statename) {
+  statename=statename.replace(/\s+/g,"");
+  for (var i=0; i<51;i++){
+    if(dominate.State[i]== statename){
+      return dominate.Dominant1[i]
+    }
+  }
+}
+function finddominate2(statename) {
+  statename=statename.replace(/\s+/g,"");
+  for (var i=0; i<51;i++){
+    if(dominate.State[i]== statename){
+      return dominate.Dominant2[i]
+    }
+  }
+}
+
+function onMouseClick(){
+
+  d3.selectAll('circle').remove();
+  d3.selectAll('.axis').remove();
+  d3.selectAll('text').remove();
+  d3.selectAll('.legend').remove();
+  d3.selectAll('.cor').remove();
+  var statename = d3.select(this)._groups[0][0].__data__.properties.name;
+  statename=statename.replace(/\s+/g,"");
+  // console.log(statename);
+  var statePca = pcaData[statename];
+  // console.log(d3.select(this)._groups[0][0].__data__.properties.name);
+  // console.log(statePca);
+  TwoPC2D(statePca);
+  var statemartir = martirdata[statename];
+  // console.log(statemartir);
+  drawmatrix(statemartir);
+}
+
+
+function TwoPC2D(data) {
+
+    data.forEach(function(d) {
+        d.PC1 = d.PC1
+        d.PC2 = d.PC2
+    });
+
+    var xScale = d3.scaleLinear()
+    .domain([
+      d3.min([0,d3.min(data,function (d) { return d.PC1-1 })]),
+      d3.max([0,d3.max(data,function (d) { return d.PC1+1 })])
+      ])
+    .range([0,450]);
+
+    var yScale = d3.scaleLinear()
+    .domain([
+      d3.min([0,d3.min(data,function (d) { return d.PC2-1 })]),
+      d3.max([0,d3.max(data,function (d) { return d.PC2+1 })])
+      ])
+    .range([300,0]);
+
+    var color = d3.scaleOrdinal(d3.schemeCategory10);
+
+    var xAxis = d3.axisBottom(xScale)
+    .ticks(10);
+
+    var yAxis = d3.axisLeft(yScale)
+    .ticks(10);
+
+    var circles = svg.selectAll('circle')
+        .data(data)
+        .enter()
+      .append('circle')
+        .attr('cx',function (d) { return 1000 + xScale(d.PC1) })
+        .attr('cy',function (d) { return yScale(d.PC2) })
+        .attr('r','3')
+        .attr('stroke','black')
+        .attr('stroke-width',1)
+        .style("fill", function(d) { return color(d.price); });
+
+    var legend = svg.selectAll(".legend")
+          .data(color.domain())
+        .enter().append("g")
+          .attr("class", "legend")
+          .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+    legend.append("rect")
+        .attr("x",1000+ 450 - 18)
+        .attr("width", 18)
+        .attr("height", 18)
+            .attr('class','label')
+        .style("fill", color);
+
+    legend.append("text")
+        .attr("x", 1000+ 450 - 24)
+        .attr("y", 9)
+        .attr("dy", ".35em")
+            .attr('class','label')
+        .style("text-anchor", "end")
+        .text(function(d) { return d; });
+
+    svg.append('g')
+        .attr('class','axis')
+        .attr('transform', 'translate(' + 1000 + ',' + 300 + ')')
+        .call(xAxis)
+      .append('text') // X-axis Label
+        .attr('class','label')
+        .attr('y',-10)
+        .attr('x',1000+450)
+        .attr('dy','.71em')
+        .style('text-anchor','end')
+        .text('Components 1');
+    // Y-axis
+    svg.append('g')
+        .attr('class', 'axis')
+        .attr('transform', 'translate(' + 1000 + ',0)')
+        .call(yAxis)
+      .append('text')
+        .attr('class','label')
+        .attr('transform','rotate(-90)')
+        .attr('x',1000+0)
+        .attr('y',5)
+        .attr('dy','.71em')
+        .style('text-anchor','end')
+        .text('Component 2')
+}
+
+
+function drawmatrix(data) {
+
+  var domain = d3.set(data.map(function(d) { return d.x })).values();
+  var num = Math.sqrt(data.length);
+
+  // color scale
+  var color = d3.scaleLinear()
+    .domain([-1, 0, 1])
+    .range(["#B22222", "#fff", "#000080"]);
+
+  var size = d3.scaleSqrt()
+    .domain([0, 1])
+    .range([0, 9]);
+
+  // X scale
+  var x = d3.scalePoint()
+    .range([0, 290])
+    .domain(domain);
+
+  // Y scale
+  var y = d3.scalePoint()
+    .range([0, 290])
+    .domain(domain);
+
+  var cor = svg.selectAll(".cor")
+    .data(data)
+    .enter()
+    .append("g")
+      .attr("class", "cor")
+      .attr("transform", function(d) {
+        var tempx = x(d.x) + 1000;
+        var tempy = y(d.y) + 360;
+        return "translate(" + tempx + "," + tempy + ")";
+      });
+
+
+  cor.filter(function(d){
+      var ypos = domain.indexOf(d.y);
+      var xpos = domain.indexOf(d.x);
+      return xpos <= ypos;
+    })
+    .append("text")
+      .attr("y", 5)
+      .text(function(d) {
+        if (d.x === d.y) {
+          return d.x;
+        } else {
+          return d.value.toFixed(2);
+        }
+      })
+      .style("font-size", 10)
+      .style("text-align", "center")
+      .style("fill", function(d){
+        if (d.x === d.y) {
+          return "#000";
+        } else {
+          return color(d.value);
+        }
+      });
+
+  cor.filter(function(d){
+      var ypos = domain.indexOf(d.y);
+      var xpos = domain.indexOf(d.x);
+      return xpos > ypos;
+    })
+    .append("circle")
+      .attr("r", function(d){ return size(Math.abs(d.value)) })
+      .style("fill", function(d){
+        if (d.x === d.y) {
+          return "#000";
+        } else {
+          return color(d.value);
+        }
+      })
+      .style("opacity", 0.8)
+}
+
+
+  </script>
+</div>
+
+<div id='footer' style = 'background-color: #30608F; color:white;clear:both;height:70px;font-size: 18px;padding:10px;line-height:130%'>
+  Housing Price Prediction
+  <form action="" method="post">
+    <select name="States">
+      <option selected value="-1">--States--</option>
+      <option value="0">Alabama</option>
+      <option value="1">Alaska</option>
+      <option value="2">Arizona</option>
+      <option value="3">Arkansas</option>
+      <option value="4">California</option>
+      <option value="5">Colorado</option>
+      <option value="6">Connecticut</option>
+      <option value="7">Delaware</option>
+      <option value="8">District Of Columbia</option>
+      <option value="9">Florida</option>
+      <option value="10">Georgia</option>
+      <option value="11">Hawaii</option>
+      <option value="12">Idaho</option>
+      <option value="13">Illinois</option>
+      <option value="14">Indiana</option>
+      <option value="15">Iowa</option>
+      <option value="16">Kansas</option>
+      <option value="17">Kentucky</option>
+      <option value="18">Louisiana</option>
+      <option value="19">Maine</option>
+      <option value="20">Maryland</option>
+      <option value="21">Massachusetts</option>
+      <option value="22">Michigan</option>
+      <option value="23">Minnesota</option>
+      <option value="24">Mississippi</option>
+      <option value="25">Missouri</option>
+      <option value="26">Montana</option>
+      <option value="27">Nebraska</option>
+      <option value="28">Nevada</option>
+      <option value="29">New Hampshire</option>
+      <option value="30">New Jersey</option>
+      <option value="31">New Mexico</option>
+      <option value="32">New York</option>
+      <option value="33">North Carolina</option>
+      <option value="34">North Dakota</option>
+      <option value="35">Ohio</option>
+      <option value="36">Oklahoma</option>
+      <option value="37">Oregon</option>
+      <option value="38">Pennsylvania</option>
+      <option value="39">Rhode Island</option>
+      <option value="40">South Carolina</option>
+      <option value="41">South Dakota</option>
+      <option value="42">Tennessee</option>
+      <option value="43">Texas</option>
+      <option value="45">Utah</option>
+      <option value="46">Vermont</option>
+      <option value="47">Virginia</option>
+      <option value="48">Washington</option>
+      <option value="49">West Virginia</option>
+      <option value="50">Wisconsin</option>
+      <option value="51">Wyoming</option>
+    </select>
+    <select name="Year">
+      <option selected value="-1">--Year--</option>
+      <option value="2019">2019</option>
+      <option value="2020">2020</option>
+      <option value="2021">2021</option>
+      <option value="2022">2022</option>
+    </select>
+    <select name="Month">
+      <option selected value="-1">--Month--</option>
+      <option value='1'>Janaury</option>
+      <option value='2'>February</option>
+      <option value='3'>March</option>
+      <option value='4'>April</option>
+      <option value='5'>May</option>
+      <option value='6'>June</option>
+      <option value='7'>July</option>
+      <option value='8'>August</option>
+      <option value='9'>September</option>
+      <option value='10'>October</option>
+      <option value='11'>November</option>
+      <option value='12'>December</option>
+    </select>
+    <input type="submit" value="  Predict!  ">
+  </form>
+  Predict Result:
+
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{{presult}}
+
+  <script>
+    //head
+  </script>
+
+</div>
+</body>
+</html>
