@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <script src="http://d3js.org/d3.v4.min.js" charset="utf-8"></script>
+
+  <style>
+    .domain {
+      fill: none;
+      stroke: gray;
+      stroke-width: 1;
+    }
+    .bar {
+      fill: steelblue;
+    }
+    .highlight {
+      fill: orange;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="container"> </div>
+  <div id="option">
+    <input name="updateButton" type="button" value="2-Bedroom" onclick="TwoBedsB()" />
+  </div>
+  <div id="option">
+    <input name="updateButton" type="button" value="3-Bedroom" onclick="ThreeBeds()" />
+  </div>
+  <div id="option">
+    <input name="updateButton" type="button" value="4-Bedroom" onclick="FourBeds()" />
+  </div>
+  <button onclick="toPie()">toPie</button>
+  <button onclick="toBar()">toBar</button>
+
+  <script>
+    //append svg and g in div container
+    var width = 800,
+      height = 500,
+      margin = {
+        left: 40,
+        top: 50,
+        right: 20,
+        bottom: 80
+      },
+      g_width = width - margin.left - margin.right,
+      g_height = height - margin.top - margin.bottom;
+
+    var svg = d3.select("#container")
+      .append("svg")
+      .attr("width", width)
+      .attr("height", height)
+
+    var x_scale = d3.scaleBand().rangeRound([0, g_width]).padding(0.2);
+    y_scale = d3.scaleLinear().range([g_height, 0]);
+
+    var g = svg.append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    svg.append("text")
+      .attr("transform", "translate(100,0)")
+      .attr("y", 30)
+      .attr("font-size", "25")
+      .attr("font-family", "Lato")
+      .text("2-Bedroom House Price In Different States (8-Year Avg.)")
+
+    d3.csv("State_series.csv", function(error, csv_data) {
+      var data = d3.nest()
+        .key(function(d) {
+          return d.RegionName;
+        })
+        .rollup(function(d) {
+          return d3.sum(d, function(g) {
+            return g.MedianListingPricePerSqft_2Bedroom;
+          });
+        })
+        .entries(csv_data);
+
+      data.forEach(function(d) {
+        d.key = d.key;
+        d.value = d.value / (12 * 8);
+      });
+
+      x_scale.domain(data.map(function(d) {
+        return d.key;
+      }))
+      y_scale.domain([0, d3.max(data, function(d) {
+        return d.value;
+      })])
+
+      g.append("g")
+        .call(d3.axisBottom(x_scale))
+        .attr("transform", "translate(0," + g_height + ")")
+        .selectAll("text")
+        .attr("y", 8)
+        .attr("x", 5)
+        .attr("transform", "rotate(45)")
+        .attr("dy", ".35em")
+        .style("text-anchor", "start");
+
+      g.append("g")
+        .call(d3.axisLeft(y_scale))
+        .append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("text-anchor", "end")
+        .attr("dy", "1.2em")
+        .attr("font-size", "15px")
+        .style("fill", "black")
+        .text("Price (Dollars Per SqFt)")
+
+      g.selectAll(".bar")
+        .data(data)
+        .enter()
+        .append("rect")
+        .attr("class", "bar")
+        .attr("x", function(d) {
+          return x_scale(d.key);
+        })
+        .attr("y", function(d) {
+          return y_scale(d.value);
+        })
+        .attr("width", x_scale.bandwidth())
+        .attr("height", function(d) {
+          return g_height - y_scale(d.value);
+        })
+        .on("mouseover", onMouseOver)
+        .on("mouseout", onMouseOut)
+        .transition()
+        .ease(d3.easeLinear)
+        .duration(200)
+        .delay(function(d, i) {
+          return i * 25;
+        })
+    });
+    //Mouse on-click function
+    //Update data Called from the onclick
+    function ThreeBeds() {
+      // Get the data to be updated
+      d3.csv("State_series.csv", function(error, csv_data) {
+
+        var data = d3.nest()
+          .key(function(d) {
+            return d.RegionName;
+          })
+          .rollup(function(d) {
+            return d3.sum(d, function(g) {
+              return g.MedianListingPricePerSqft_3Bedroom;
+            });
+          })
+          .entries(csv_data);
+
+        data.forEach(function(d) {
+          d.key = d.key;
+          d.value = d.value / (12 * 8);
+        });
+        //console.log(data)
+        // Scale the range of the data again
+        x_scale.domain(data.map(function(d) {
+          return d.key;
+        }))
+        y_scale.domain([0, d3.max(data, function(d) {
+          return d.value;
+        })])
+        // Select the section we want to apply our changes to
+        //var svg = d3.select("#container")
+        var g = d3.select("svg").remove()
+        var svg = d3.select("#container")
+          .append("svg")
+          .attr("width", width)
+          .attr("height", height)
+
+        var g = svg.append("g")
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        svg.append("text")
+          .attr("transform", "translate(100,0)")
+          .attr("y", 30)
+          .attr("font-size", "25")
+          .attr("font-family", "Lato")
+          .text("3-Bedroom House Price In Different States (8-Year Avg.)")
+
+        g.append("g")
+          .call(d3.axisBottom(x_scale))
+          .attr("transform", "translate(0," + g_height + ")")
+          .selectAll("text")
+          .attr("y", 8)
+          .attr("x", 5)
+          .attr("transform", "rotate(45)")
+          .attr("dy", ".35em")
+          .style("text-anchor", "start");
+
+        g.append("g")
+          .call(d3.axisLeft(y_scale))
+          .append("text")
+          .attr("transform", "rotate(-90)")
+          .attr("text-anchor", "end")
+          .attr("dy", "1.2em")
+          .attr("font-size", "15px")
+          .style("fill", "black")
+          .text("Price (Dollars Per SqFt)")
+
+        g.selectAll(".bar")
+          .data(data)
+          .enter()
+          .append("rect")
+          .attr("class", "bar")
+          .attr("x", function(d) {
+            return x_scale(d.key);
+          })
+          .attr("y", function(d) {
+            return y_scale(d.value);
+          })
+          .attr("width", x_scale.bandwidth())
+          .attr("height", function(d) {
+            return g_height - y_scale(d.value);
+          })
+          .on("mouseover", onMouseOver)
+          .on("mouseout", onMouseOut)
+          .transition()
+          .ease(d3.easeLinear)
+          .duration(200)
+          .delay(function(d, i) {
+            return i * 25;
+          })
+
+      })
+    }
+
+    function FourBeds() {
+      // Get the data to be updated
+      d3.csv("State_series.csv", function(error, csv_data) {
+
+        var data = d3.nest()
+          .key(function(d) {
+            return d.RegionName;
+          })
+          .rollup(function(d) {
+            return d3.sum(d, function(g) {
+              return g.MedianListingPricePerSqft_4Bedroom;
+            });
+          })
+          .entries(csv_data);
+
+        data.forEach(function(d) {
+          d.key = d.key;
+          d.value = d.value / (12 * 8);
+        });
+
+        x_scale.domain(data.map(function(d) {
+          return d.key;
+        }))
+        y_scale.domain([0, d3.max(data, function(d) {
+          return d.value;
+        })])
+        // Select the section we want to apply our changes to
+        //var svg = d3.select("#container")
+        var g = d3.select("svg").remove()
+        var svg = d3.select("#container")
+          .append("svg")
+          .attr("width", width)
+          .attr("height", height)
+
+        var g = svg.append("g")
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        svg.append("text")
+          .attr("transform", "translate(100,0)")
+          .attr("y", 30)
+          .attr("font-size", "25")
+          .attr("font-family", "Lato")
+          .text("4-Bedroom House Price In Different States (8-Year Avg.)")
+
+        g.append("g")
+          .call(d3.axisBottom(x_scale))
+          .attr("transform", "translate(0," + g_height + ")")
+          .selectAll("text")
+          .attr("y", 8)
+          .attr("x", 5)
+          .attr("transform", "rotate(45)")
+          .attr("dy", ".35em")
+          .style("text-anchor", "start");
+
+        g.append("g")
+          .call(d3.axisLeft(y_scale))
+          .append("text")
+          .attr("transform", "rotate(-90)")
+          .attr("text-anchor", "end")
+          .attr("dy", "1.2em")
+          .attr("font-size", "15px")
+          .style("fill", "black")
+          .text("Price (Dollars Per SqFt)")
+
+        g.selectAll(".bar")
+          .data(data)
+          .enter()
+          .append("rect")
+          .attr("class", "bar")
+          .attr("x", function(d) {
+            return x_scale(d.key);
+          })
+          .attr("y", function(d) {
+            return y_scale(d.value);
+          })
+          .attr("width", x_scale.bandwidth())
+          .attr("height", function(d) {
+            return g_height - y_scale(d.value);
+          })
+          .on("mouseover", onMouseOver)
+          .on("mouseout", onMouseOut)
+          .transition()
+          .ease(d3.easeLinear)
+          .duration(200)
+          .delay(function(d, i) {
+            return i * 25;
+          })
+      })
+    }
+
+    function TwoBedsB() {
+      d3.csv("State_series.csv", function(error, csv_data) {
+        var data = d3.nest()
+          .key(function(d) {
+            return d.RegionName;
+          })
+          .rollup(function(d) {
+            return d3.sum(d, function(g) {
+              return g.MedianListingPricePerSqft_2Bedroom;
+            });
+          })
+          .entries(csv_data);
+
+        data.forEach(function(d) {
+          d.key = d.key;
+          d.value = d.value / (12 * 8);
+        });
+
+        x_scale.domain(data.map(function(d) {
+          return d.key;
+        }))
+        y_scale.domain([0, d3.max(data, function(d) {
+          return d.value;
+        })])
+        // Select the section we want to apply our changes to
+        var g = d3.select("svg").remove()
+        var svg = d3.select("#container")
+          .append("svg")
+          .attr("width", width)
+          .attr("height", height)
+
+        var g = svg.append("g")
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        svg.append("text")
+          .attr("transform", "translate(100,0)")
+          .attr("y", 30)
+          .attr("font-size", "25")
+          .attr("font-family", "Lato")
+          .text("2-Bedroom House Price In Different States (8-Year Avg.)")
+
+        g.append("g")
+          .call(d3.axisBottom(x_scale))
+          .attr("transform", "translate(0," + g_height + ")")
+          .selectAll("text")
+          .attr("y", 8)
+          .attr("x", 5)
+          .attr("transform", "rotate(45)")
+          .attr("dy", ".35em")
+          .style("text-anchor", "start");
+
+        g.append("g")
+          .call(d3.axisLeft(y_scale))
+          .append("text")
+          .attr("transform", "rotate(-90)")
+          .attr("text-anchor", "end")
+          .attr("dy", "1.2em")
+          .attr("font-size", "15px")
+          .style("fill", "black")
+          .text("Price (Dollars Per SqFt)")
+
+        g.selectAll(".bar")
+          .data(data)
+          .enter()
+          .append("rect")
+          .attr("class", "bar")
+          .attr("x", function(d) {
+            return x_scale(d.key);
+          })
+          .attr("y", function(d) {
+            return y_scale(d.value);
+          })
+          .attr("width", x_scale.bandwidth())
+          .attr("height", function(d) {
+            return g_height - y_scale(d.value);
+          })
+          .attr("class", "bar")
+          .on("mouseover", onMouseOver)
+          .on("mouseout", onMouseOut)
+          .transition()
+          .ease(d3.easeLinear)
+          .duration(200)
+          .delay(function(d, i) {
+            return i * 25;
+          })
+      })
+    }
+    //creat mouseover event function
+    function onMouseOver(d, i) {
+      d3.select(this)
+        .attr("class", "highlight");
+
+      d3.select(this)
+        .transition()
+        .duration(200)
+        .attr('width', x_scale.bandwidth() + 16)
+        .attr("x", function(d) {
+          return x_scale(d.key) - 8;
+        })
+        .attr("y", function(d) {
+          return y_scale(d.value) - 130;
+        })
+        .attr("height", function(d) {
+          return height - y_scale(d.value);
+        });
+      //display value when mouse is over relevant bar
+      g.append("text")
+        .attr("class", "val")
+        .attr("x", function() {
+          return x_scale(d.key) - 10;
+        })
+        .attr("y", function() {
+          return y_scale(d.value) - 140;
+        })
+        .text(d3.format("d")(d.value))
+    }
+    //creat mouseout function
+    function onMouseOut(d, i) {
+      d3.select(this)
+        .attr("class", "bar");
+      //restore the original width and height of the selected bar
+      d3.select(this)
+        .transition()
+        .duration(200)
+        .attr("x", function(d) {
+          return x_scale(d.key);
+        })
+        .attr("y", function(d) {
+          return y_scale(d.value);
+        })
+        .attr("width", x_scale.bandwidth())
+        .attr("height", function(d) {
+          return g_height - y_scale(d.value);
+        })
+      //restore the y value to the original value.
+      d3.selectAll('.val').remove()
+    }
+  </script>
+</body>
+
+</html>
